@@ -1,0 +1,18 @@
+services:
+  polystream:
+    build: .
+    container_name: polystream
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Overrides values from .env.example defaults; DB + caches live on the named volume.
+      DATA_DIR: /data
+      PORT: '3000'
+    ports:
+      # Localhost-only: nginx on the host reverse-proxies to this, TLS terminated there.
+      - '127.0.0.1:3000:3000'
+    volumes:
+      - polystream-data:/data
+
+volumes:
+  polystream-data:
