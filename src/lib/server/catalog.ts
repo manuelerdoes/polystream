@@ -498,6 +498,78 @@ export function getPlayable(mediaId: string): PlayableMedia | null {
 	};
 }
 
+/** Just enough about the following episode for the player's "Up next" card. */
+export interface NextEpisode {
+	mediaId: string;
+	season: number;
+	episode: number;
+	title: string;
+	stillPath: string | null;
+}
+
+/**
+ * The play-ready episode that should autoplay after `mediaId` (Netflix-style "Up next").
+ * Returns null for movies, unknown ids, the last episode of a series, or when the successor
+ * exists but isn't play-ready yet (still converting) — the player skips the card in all these
+ * cases. "Next" is the smallest-numbered later episode in the same season, else the lowest
+ * episode of the next-numbered season under the same show.
+ */
+export function getNextEpisode(mediaId: string): NextEpisode | null {
+	const db = getDb();
+	const current = db
+		.prepare(`SELECT media_id, type, parent_id, season, episode FROM catalog WHERE media_id = ?`)
+		.get(mediaId) as
+		| { media_id: string; type: CatalogType; parent_id: string | null; season: number | null; episode: number | null }
+		| undefined;
+	if (!current || current.type !== 'episode' || current.parent_id === null) return null;
+
+	// 1. Next episode within the same season.
+	let row = db
+		.prepare(
+			`${JOINED_SELECT}
+			 WHERE c.parent_id = ? AND c.type = 'episode' AND c.episode > ?
+			 ORDER BY c.episode ASC LIMIT 1`
+		)
+		.get(current.parent_id, current.episode ?? 0) as JoinedRow | undefined;
+
+	// 2. Otherwise the first episode of the next season under the same show.
+	if (!row) {
+		const season = db
+			.prepare(`SELECT parent_id, season FROM catalog WHERE media_id = ? AND type = 'season'`)
+			.get(current.parent_id) as { parent_id: string | null; season: number | null } | undefined;
+		if (season?.parent_id != null) {
+			const nextSeason = db
+				.prepare(
+					`SELECT media_id FROM catalog
+					 WHERE parent_id = ? AND type = 'season' AND season > ?
+					 ORDER BY season ASC LIMIT 1`
+				)
+				.get(season.parent_id, season.season ?? 0) as { media_id: string } | undefined;
+			if (nextSeason) {
+				row = db
+					.prepare(
+						`${JOINED_SELECT}
+						 WHERE c.parent_id = ? AND c.type = 'episode'
+						 ORDER BY c.episode ASC LIMIT 1`
+					)
+					.get(nextSeason.media_id) as JoinedRow | undefined;
+			}
+		}
+	}
+
+	if (!row) return null;
+	// Decision: a not-yet-play-ready successor is treated as "no next episode".
+	if (!isPlayReady(getConversionState(row.media_id))) return null;
+
+	return {
+		mediaId: row.media_id,
+		season: row.season ?? 0,
+		episode: row.episode ?? 0,
+		title: row.name ?? row.title,
+		stillPath: row.still_path
+	};
+}
+
 export function getScanState(): ScanState {
 	const row = getDb()
 		.prepare(`SELECT status, last_scan_at, last_error, item_count FROM scan_state WHERE id = 1`)

@@ -33,6 +33,7 @@
 			primaryVideoCodec={data.media.variants?.primary.videoCodec ?? data.media.videoCodec}
 			hasH264Variant={data.media.variants?.h264 != null}
 			embeddedSubtitles={data.media.embeddedSubtitles}
+			next={data.next}
 			mode={data.mode ?? 'tv'}
 		/>
 	{:else}

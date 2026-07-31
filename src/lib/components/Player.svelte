@@ -16,8 +16,10 @@
 
 	import { onDestroy, untrack } from 'svelte';
 	import { resolve } from '$app/paths';
+	import { goto } from '$app/navigation';
 	import { pickVariant, type DeviceMode, type VariantDecision } from '$lib/capabilities';
-	import type { EmbeddedSubtitleRef, SubtitleRef } from '$lib/server/catalog';
+	import type { EmbeddedSubtitleRef, NextEpisode, SubtitleRef } from '$lib/server/catalog';
+	import { tmdbImage, TMDB_STILL_SIZE } from '$lib/tmdb';
 
 	interface SubtitlePref {
 		enabled: boolean;
@@ -38,6 +40,8 @@
 		/** Whether an H.264 fallback variant exists for this media. */
 		hasH264Variant: boolean;
 		embeddedSubtitles: EmbeddedSubtitleRef[];
+		/** The play-ready episode to autoplay after this one; null for movies/last episode. */
+		next?: NextEpisode | null;
 		mode: DeviceMode;
 		/** Bindable: whether the control bar is currently shown. Lets a host (the watch page) hide
 		 *  its own chrome — e.g. the Back link — in lockstep with the auto-hiding controls. */
@@ -54,6 +58,7 @@
 		primaryVideoCodec,
 		hasH264Variant,
 		embeddedSubtitles,
+		next = null,
 		mode,
 		controlsVisible = $bindable(true)
 	}: Props = $props();
@@ -232,6 +237,12 @@
 			currentTime = resumeAt;
 		}
 		applySubtitleTracks();
+		// Arrived here via "Up next" auto-advance — start the new episode without a click. If the
+		// browser blocks it (no user activation), it stays paused and the user presses play.
+		if (autoplayOnLoad) {
+			autoplayOnLoad = false;
+			void videoEl.play().catch(() => {});
+		}
 	}
 
 	function updateBuffered() {
@@ -502,6 +513,57 @@
 	function handleBeforeUnload() {
 		reportProgress(true);
 	}
+
+	// ---- Autoplay next episode ("Up next" card) ----------------------------------------------
+
+	const UP_NEXT_COUNTDOWN = 10;
+	let showUpNext = $state(false);
+	let countdown = $state(UP_NEXT_COUNTDOWN);
+	let countdownTimer: ReturnType<typeof setInterval> | undefined;
+
+	const nextStill = $derived(next ? tmdbImage(next.stillPath, TMDB_STILL_SIZE) : null);
+
+	function clearCountdown() {
+		if (countdownTimer !== undefined) {
+			clearInterval(countdownTimer);
+			countdownTimer = undefined;
+		}
+	}
+
+	// Set right before auto-advancing so the next episode starts playing on its own. The /watch
+	// route reuses this Player instance across the param change, so the flag survives the goto and
+	// is consumed by handleLoadedMetadata once the new src has loaded.
+	let autoplayOnLoad = false;
+
+	function goToNext() {
+		if (!next) return;
+		clearCountdown();
+		showUpNext = false;
+		autoplayOnLoad = true;
+		void goto(resolve('/watch/[mediaId]', { mediaId: next.mediaId }));
+	}
+
+	function cancelUpNext() {
+		clearCountdown();
+		showUpNext = false;
+	}
+
+	// On end, report the final position and — if there's a play-ready successor — bring up the
+	// countdown card. No successor (movie / last episode / still-converting next) just leaves the
+	// video paused on its last frame with controls shown.
+	function handleEnded() {
+		reportProgress();
+		if (!next) return;
+		countdown = UP_NEXT_COUNTDOWN;
+		showUpNext = true;
+		clearCountdown();
+		countdownTimer = setInterval(() => {
+			countdown -= 1;
+			if (countdown <= 0) goToNext();
+		}, 1000);
+	}
+
+	onDestroy(clearCountdown);
 </script>
 
 <svelte:window onvisibilitychange={handleVisibilityChange} onbeforeunload={handleBeforeUnload} />
@@ -545,6 +607,7 @@
 			onprogress={updateBuffered}
 			onplay={handlePlay}
 			onpause={handlePause}
+			onended={handleEnded}
 			onvolumechange={syncVolumeState}
 		>
 			{#each subtitleOptions as opt (opt.key)}
@@ -660,6 +723,25 @@
 				</button>
 			</div>
 		</div>
+
+		{#if showUpNext && next}
+			<div class="up-next" role="dialog" aria-label="Up next">
+				<span class="up-next-label">Up next · S{next.season} E{next.episode}</span>
+				<div class="up-next-body">
+					{#if nextStill}
+						<img class="up-next-still" src={nextStill} alt="" />
+					{/if}
+					<span class="up-next-title">{next.title}</span>
+				</div>
+				<div class="up-next-actions">
+					<!-- svelte-ignore a11y_autofocus -->
+					<button type="button" class="up-next-play" onclick={goToNext} autofocus>
+						▶ Play now · {countdown}
+					</button>
+					<button type="button" class="up-next-cancel" onclick={cancelUpNext}>Cancel</button>
+				</div>
+			</div>
+		{/if}
 	{/if}
 </div>
 
@@ -906,5 +988,89 @@
 	.menu button.active {
 		color: var(--accent-hover);
 		font-weight: 700;
+	}
+
+	.up-next {
+		position: absolute;
+		right: var(--space-3);
+		bottom: var(--space-3);
+		z-index: 3;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		width: min(22rem, 70vw);
+		padding: var(--space-3);
+		color: #fff;
+		background: rgba(0, 0, 0, 0.85);
+		border: 1px solid rgba(255, 255, 255, 0.15);
+		border-radius: 10px;
+		box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+	}
+
+	.up-next-label {
+		font-size: 0.72rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: var(--text-muted);
+	}
+
+	.up-next-body {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+	}
+
+	.up-next-still {
+		width: 5.5rem;
+		aspect-ratio: 16 / 9;
+		object-fit: cover;
+		border-radius: 6px;
+		flex-shrink: 0;
+	}
+
+	.up-next-title {
+		font-size: 0.95rem;
+		font-weight: 600;
+		line-height: 1.25;
+	}
+
+	.up-next-actions {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.up-next-play {
+		flex: 1 1 auto;
+		padding: 0.5rem 0.8rem;
+		font-size: 0.85rem;
+		font-weight: 700;
+		color: #000;
+		background: var(--accent);
+		border: none;
+		border-radius: 6px;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+
+	.up-next-play:hover,
+	.up-next-play:focus-visible {
+		background: var(--accent-hover);
+	}
+
+	.up-next-cancel {
+		padding: 0.5rem 0.8rem;
+		font-size: 0.85rem;
+		font-weight: 600;
+		color: #fff;
+		background: rgba(255, 255, 255, 0.12);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 6px;
+		cursor: pointer;
+	}
+
+	.up-next-cancel:hover,
+	.up-next-cancel:focus-visible {
+		background: rgba(255, 255, 255, 0.25);
 	}
 </style>

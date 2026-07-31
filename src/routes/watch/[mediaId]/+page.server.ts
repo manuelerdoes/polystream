@@ -1,7 +1,7 @@
 import { error, redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { getProfile } from '$lib/server/profiles';
-import { getPlayable, isPlayReady } from '$lib/server/catalog';
+import { getPlayable, getNextEpisode, isPlayReady } from '$lib/server/catalog';
 import { getProgress } from '$lib/server/progress';
 import { getSubtitlePref } from '$lib/server/subtitlePrefs';
 
@@ -23,6 +23,9 @@ export const load: PageServerLoad = ({ locals, params }) => {
 		profile,
 		media,
 		ready: isPlayReady(media.conversionState),
+		// Null for movies, the last episode, or a successor that isn't play-ready — the player
+		// only shows its "Up next" autoplay card when this is set.
+		next: getNextEpisode(params.mediaId),
 		startAt: progress?.positionSeconds ?? 0,
 		subtitlePref: getSubtitlePref(profile.id)
 	};
