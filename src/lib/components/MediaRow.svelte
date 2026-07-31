@@ -9,6 +9,7 @@
 
 	import MediaCard from './MediaCard.svelte';
 	import { tmdbImage, TMDB_POSTER_SIZE } from '$lib/tmdb';
+	import { spatialNav } from '$lib/actions/spatialNav';
 
 	interface Props {
 		title?: string;
@@ -32,7 +33,7 @@
 			</div>
 		{/if}
 
-		<div class="row">
+		<div class="row" use:spatialNav>
 			{#each items as item (item.mediaId)}
 				<div class="row-item">
 					<MediaCard

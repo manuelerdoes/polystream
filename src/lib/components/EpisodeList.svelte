@@ -3,6 +3,7 @@
 	// target per the caller's device mode (inline ?play= reveal on desktop, /watch on TV).
 
 	import { tmdbImage, TMDB_STILL_SIZE } from '$lib/tmdb';
+	import { spatialNav } from '$lib/actions/spatialNav';
 	import ConversionStatus from '$lib/components/ConversionStatus.svelte';
 	import DownmixAudioButton from '$lib/components/DownmixAudioButton.svelte';
 	import GenerateFallbackButton from '$lib/components/GenerateFallbackButton.svelte';
@@ -24,7 +25,7 @@
 	}
 </script>
 
-<ul class="list">
+<ul class="list" use:spatialNav>
 	{#each episodes as ep (ep.mediaId)}
 		<li class="episode">
 			<span class="still">

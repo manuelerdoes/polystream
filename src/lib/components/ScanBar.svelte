@@ -6,9 +6,11 @@
 
 	interface Props {
 		scanState: ScanState;
+		// Rescan is an advanced-only action; non-advanced profiles see status only.
+		advanced: boolean;
 	}
 
-	let { scanState }: Props = $props();
+	let { scanState, advanced }: Props = $props();
 
 	let submitting = $state(false);
 
@@ -19,21 +21,23 @@
 </script>
 
 <div class="scan-bar">
-	<form
-		method="POST"
-		action="?/rescan"
-		use:enhance={() => {
-			submitting = true;
-			return async ({ update }) => {
-				await update();
-				submitting = false;
-			};
-		}}
-	>
-		<button type="submit" disabled={submitting || scanState.status === 'running'}>
-			{scanState.status === 'running' || submitting ? 'Scanning…' : 'Rescan library'}
-		</button>
-	</form>
+	{#if advanced}
+		<form
+			method="POST"
+			action="?/rescan"
+			use:enhance={() => {
+				submitting = true;
+				return async ({ update }) => {
+					await update();
+					submitting = false;
+				};
+			}}
+		>
+			<button type="submit" disabled={submitting || scanState.status === 'running'}>
+				{scanState.status === 'running' || submitting ? 'Scanning…' : 'Rescan library'}
+			</button>
+		</form>
+	{/if}
 
 	<span class="status">
 		{scanState.itemCount} item{scanState.itemCount === 1 ? '' : 's'} · last scan: {formatTime(

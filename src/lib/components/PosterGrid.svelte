@@ -3,6 +3,7 @@
 
 	import MediaCard from './MediaCard.svelte';
 	import { tmdbImage, TMDB_POSTER_SIZE } from '$lib/tmdb';
+	import { spatialNav } from '$lib/actions/spatialNav';
 	import type { MediaCard as MediaCardData } from '$lib/server/catalog';
 
 	interface Props {
@@ -13,7 +14,7 @@
 	let { items, hrefFor }: Props = $props();
 </script>
 
-<div class="grid">
+<div class="grid" use:spatialNav>
 	{#each items as item (item.mediaId)}
 		<MediaCard
 			href={hrefFor(item)}

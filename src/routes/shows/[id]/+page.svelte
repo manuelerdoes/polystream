@@ -3,6 +3,7 @@
 	import AppHeader from '$lib/components/AppHeader.svelte';
 	import EpisodeList from '$lib/components/EpisodeList.svelte';
 	import Player from '$lib/components/Player.svelte';
+	import { spatialNav } from '$lib/actions/spatialNav';
 	import { tmdbImage, TMDB_BACKDROP_SIZE } from '$lib/tmdb';
 	import type { Episode } from '$lib/server/catalog';
 	import type { PageData } from './$types';
@@ -62,7 +63,7 @@
 	{#if data.show.seasons.length === 0}
 		<p class="empty">No seasons found for this show yet.</p>
 	{:else}
-		<nav class="seasons">
+		<nav class="seasons" use:spatialNav>
 			{#each data.show.seasons as s (s.mediaId)}
 				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- seasonHref() builds on resolve(), just appends the ?season= query param -->
 				<a class="season-link" class:active={s.season === data.season} href={seasonHref(s.season)}>

@@ -21,7 +21,7 @@
 	<h1>Welcome back, {data.profile.name}</h1>
 
 	<div class="status-row">
-		<ScanBar scanState={data.scanState} />
+		<ScanBar scanState={data.scanState} advanced={data.profile.advanced} />
 		<ConversionBar initialJobs={data.conversionJobs} />
 	</div>
 

@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { avatarColor, monogram } from '$lib/avatars';
+	import { spatialNav } from '$lib/actions/spatialNav';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -34,7 +35,7 @@
 		<p class="empty">No profiles yet — create the first one to get started.</p>
 	{/if}
 
-	<div class="grid">
+	<div class="grid" use:spatialNav>
 		{#each data.profiles as profile (profile.id)}
 			<div class="tile-wrap">
 				{#if editingId === profile.id}

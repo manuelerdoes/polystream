@@ -1,0 +1,39 @@
+# Build context excludes — keep the image small and, critically, prevent the local
+# (macOS) node_modules from clobbering the Linux ones compiled inside the image.
+# better-sqlite3 is a native module: a host-arch binary would crash the container.
+
+node_modules
+npm-debug.log*
+
+# Build output (rebuilt inside the image)
+build
+/.svelte-kit
+.output
+.vercel
+.netlify
+.wrangler
+
+# Local data: SQLite DB + on-disk caches. Runtime uses the /data volume instead.
+data
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Secrets — injected at runtime via env_file, never baked into the image
+.env
+.env.*
+!.env.example
+
+# Dev / VCS / docs cruft
+.git
+.gitignore
+.vscode
+.DS_Store
+Thumbs.db
+*.md
+!README.md
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*

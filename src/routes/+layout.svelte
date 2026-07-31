@@ -1,18 +1,7 @@
 <script lang="ts">
-	import { afterNavigate } from '$app/navigation';
 	import favicon from '$lib/assets/favicon.svg';
-	import { installGlobalSpatialNav, focusFirstInMain } from '$lib/actions/spatialNav';
 
 	let { children } = $props();
-
-	// One document-level D-pad/TV-remote navigation surface for the whole app.
-	$effect(() => installGlobalSpatialNav());
-
-	// Seed focus after the initial load and every client-side navigation (one frame later so
-	// the new page is laid out), giving a remote-only user a starting point and focus ring.
-	afterNavigate(() => {
-		requestAnimationFrame(() => focusFirstInMain());
-	});
 </script>
 
 <svelte:head>

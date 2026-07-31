@@ -17,6 +17,7 @@
 	import { onDestroy, untrack } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
+	import { spatialNav } from '$lib/actions/spatialNav';
 	import { pickVariant, type DeviceMode, type VariantDecision } from '$lib/capabilities';
 	import type { EmbeddedSubtitleRef, NextEpisode, SubtitleRef } from '$lib/server/catalog';
 	import { tmdbImage, TMDB_STILL_SIZE } from '$lib/tmdb';
@@ -297,8 +298,8 @@
 	}
 
 	// The seek bar handles its own arrow keys and stops propagation — otherwise both this AND
-	// the global spatial-nav listener would react to the same keypress (spatial-nav would try to
-	// move focus off the bar instead of seeking).
+	// spatialNav's container-level listener would react to the same keypress (spatialNav would
+	// try to move focus off the bar instead of seeking).
 	function handleSeekKeydown(event: KeyboardEvent) {
 		if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
 		event.preventDefault();
@@ -410,9 +411,7 @@
 	// Global player shortcuts only fire when the video itself (or the player container) has
 	// focus — when a specific control (button/slider) is focused, its own handling (native for
 	// buttons/range inputs, handleSeekKeydown for the seek bar) applies instead, and arrow keys
-	// are left for the global spatial-nav D-pad focus movement between controls. The
-	// preventDefault() on the arrow cases below is also what makes the global listener stand
-	// down while the video/player-root is focused (it skips defaultPrevented events).
+	// are left for spatialNav's D-pad focus movement between controls.
 	function handleRootKeydown(event: KeyboardEvent) {
 		noteActivity();
 		if (event.target !== videoEl && event.target !== playerRoot) return;
@@ -573,7 +572,7 @@
      -element-interactions for the mousemove/pointerdown/keydown listeners below, which only
      drive the auto-hiding control bar + global keyboard shortcuts — every actual control inside
      is its own real, focusable, interactive element (button/slider). tabindex="-1" keeps the
-     wrapper itself out of tab/D-pad order (spatial-nav skips tabindex="-1" the same way). -->
+     wrapper itself out of tab/D-pad order (spatialNav ignores tabindex="-1" the same way). -->
 <div
 	class="player"
 	class:controls-hidden={!controlsVisible}
@@ -581,6 +580,7 @@
 	aria-label="Video player"
 	tabindex="-1"
 	bind:this={playerRoot}
+	use:spatialNav
 	onmousemove={noteActivity}
 	onpointerdown={noteActivity}
 	onfocusin={noteActivity}

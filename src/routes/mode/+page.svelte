@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { spatialNav } from '$lib/actions/spatialNav';
 	import type { ActionData } from './$types';
 
 	let { form }: { form: ActionData } = $props();
@@ -16,7 +17,7 @@
 		<p class="error" role="alert">{form.error}</p>
 	{/if}
 
-	<div class="grid">
+	<div class="grid" use:spatialNav>
 		<form method="POST" action="?/select">
 			<input type="hidden" name="mode" value="desktop" />
 			<button type="submit" class="tile">
