@@ -3,6 +3,7 @@
 // ever touched inside scanner.scan(), never on a page request (phase-2.md §5).
 
 import { getDb } from '$lib/server/db';
+import { isPlayReady } from '$lib/playReady';
 
 export type CatalogType = 'movie' | 'show' | 'season' | 'episode';
 
@@ -420,13 +421,12 @@ function toConversionJobInfo(row: ConversionJobRow): ConversionJobInfo {
 }
 
 /**
- * Whether a media can be handed to the player right now (Stage 2's status gating): no job was
- * ever needed, or the one that was has finished successfully. `queued`/`running`/`error` all mean
- * "don't offer Play yet" — the file behind `path` may still be the pre-conversion original.
+ * Whether a media can be handed to the player right now (Stage 2's status gating). Defined in
+ * $lib/playReady so the client components that render Play controls can share the exact same rule
+ * (this module is server-only); re-exported here since every server caller already imports it
+ * from catalog.
  */
-export function isPlayReady(conversionState: ConversionJobInfo | null): boolean {
-	return conversionState === null || conversionState.state === 'done';
-}
+export { isPlayReady } from '$lib/playReady';
 
 /** The current conversion job for one media, or null if none was ever enqueued for it. */
 export function getConversionState(mediaId: string): ConversionJobInfo | null {

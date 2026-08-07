@@ -34,7 +34,14 @@
 	// Only an h264-kind job on this media is relevant here — a lingering 'remux' job (already
 	// finished by the time this button can even appear) is not this component's concern.
 	const h264Job = $derived(jobState?.kind === 'h264' ? jobState : null);
-	const showButton = $derived(advanced && videoCodec === 'hevc' && !hasH264Variant && !h264Job);
+	// A failed job is NOT a dead end: nothing was touched on Nextcloud (see convert.ts's ordering),
+	// the HEVC primary is still playable, and /api/fallback accepts a fresh request after an error.
+	// So the button comes back as a retry, and the failure is reported beside it — never in place
+	// of the page's Play control (that gating is $lib/playReady's job, and it stays ready here).
+	const failed = $derived(h264Job?.state === 'error' ? h264Job : null);
+	const showButton = $derived(
+		advanced && videoCodec === 'hevc' && !hasH264Variant && (!h264Job || failed !== null)
+	);
 
 	function stopPolling(): void {
 		if (timer) {
@@ -89,16 +96,38 @@
 		}
 	}
 
+	/** Forgets a failed job server-side, so its note doesn't come back on the next page load. */
+	async function dismiss(): Promise<void> {
+		jobState = null;
+		errorMessage = null;
+		try {
+			await fetch(resolve('/api/conversions'), {
+				method: 'DELETE',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ mediaId })
+			});
+		} catch {
+			// Best-effort — it's already hidden locally; worst case it reappears after a reload.
+		}
+	}
+
 	onDestroy(stopPolling);
 </script>
 
 {#if showButton}
 	<button type="button" class="generate-fallback" onclick={generate} disabled={requesting}>
-		{requesting ? 'Starting…' : 'Generate H.264 version'}
+		{requesting ? 'Starting…' : failed ? 'Retry H.264 version' : 'Generate H.264 version'}
 	</button>
-	{#if errorMessage}
-		<span class="error">{errorMessage}</span>
-	{/if}
+{/if}
+{#if failed}
+	<span class="error">
+		<span class="error-text" title={failed.error ?? undefined}>
+			H.264 version failed — the original still plays.
+		</span>
+		<button type="button" class="dismiss" onclick={dismiss} aria-label="Dismiss">×</button>
+	</span>
+{:else if errorMessage}
+	<span class="error">{errorMessage}</span>
 {:else if h264Job}
 	<ConversionStatus state={h264Job} />
 {/if}
@@ -126,9 +155,25 @@
 	}
 
 	.error {
-		display: block;
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
 		margin-top: 0.3rem;
 		font-size: 0.75rem;
 		color: var(--danger);
+	}
+
+	.error-text {
+		cursor: help;
+	}
+
+	.dismiss {
+		padding: 0 0.25rem;
+		font-size: 0.9rem;
+		line-height: 1;
+		color: inherit;
+		background: none;
+		border: none;
+		cursor: pointer;
 	}
 </style>

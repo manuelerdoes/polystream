@@ -333,6 +333,21 @@ export function requestRemux(mediaId: string): void {
 }
 
 /**
+ * Forgets a settled job row (the `DELETE /api/conversions` dismiss). A conversion_jobs row is
+ * one-per-media and nothing ever cleared it, so a failure's "Conversion failed" note stuck around
+ * forever even after the user had read it and moved on. Only 'error'/'done' rows can go: a
+ * queued/running row is owned by the worker, and dropping it would lose the job. The row is pure
+ * status — variants/catalog already carry everything a finished job produced — so removing it just
+ * returns the media to "no conversion was ever requested". Returns whether a row was removed.
+ */
+export function clearConversionJob(mediaId: string): boolean {
+	const { changes } = getDb()
+		.prepare(`DELETE FROM conversion_jobs WHERE media_id = ? AND state IN ('error', 'done')`)
+		.run(mediaId);
+	return changes > 0;
+}
+
+/**
  * Runs one job end-to-end: stream -> convert -> verify -> upload -> original-file action ->
  * catalog update -> temp cleanup. See the module docstring for the safety ordering — nothing
  * before the `uploadFile` call can affect the real Nextcloud library.

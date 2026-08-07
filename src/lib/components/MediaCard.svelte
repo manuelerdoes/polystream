@@ -51,6 +51,7 @@
 		background: var(--surface-raised);
 		transition: outline-color 0.15s ease;
 		outline: 2px solid transparent;
+		margin: 2px;
 	}
 
 	.card:hover .poster {

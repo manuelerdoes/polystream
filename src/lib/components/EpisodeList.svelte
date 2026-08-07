@@ -7,6 +7,7 @@
 	import ConversionStatus from '$lib/components/ConversionStatus.svelte';
 	import DownmixAudioButton from '$lib/components/DownmixAudioButton.svelte';
 	import GenerateFallbackButton from '$lib/components/GenerateFallbackButton.svelte';
+	import { isPlayReady } from '$lib/playReady';
 	import type { Episode } from '$lib/server/catalog';
 
 	interface Props {
@@ -17,12 +18,6 @@
 	}
 
 	let { episodes, playHrefFor, advanced }: Props = $props();
-
-	// Mirrors catalog.ts's isPlayReady — duplicated instead of imported since that module pulls in
-	// server-only code ($lib/server/db) that can't reach this client-rendered component.
-	function isReady(ep: Episode): boolean {
-		return ep.conversionState === null || ep.conversionState.state === 'done';
-	}
 </script>
 
 <ul class="list" use:spatialNav>
@@ -47,7 +42,7 @@
 			</div>
 
 			<div class="actions">
-				{#if isReady(ep)}
+				{#if isPlayReady(ep.conversionState)}
 					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- playHrefFor is caller-supplied and already resolve()d -->
 					<a class="play" href={playHrefFor(ep)}>Play</a>
 				{:else}
