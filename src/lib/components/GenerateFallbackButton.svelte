@@ -36,8 +36,8 @@
 	const h264Job = $derived(jobState?.kind === 'h264' ? jobState : null);
 	// A failed job is NOT a dead end: nothing was touched on Nextcloud (see convert.ts's ordering),
 	// the HEVC primary is still playable, and /api/fallback accepts a fresh request after an error.
-	// So the button comes back as a retry, and the failure is reported beside it — never in place
-	// of the page's Play control (that gating is $lib/playReady's job, and it stays ready here).
+	// So the button comes back as a retry, and the failure is reported here, beside a Play control
+	// that is always rendered (see catalog.ts) — this is the only place a failure is surfaced.
 	const failed = $derived(h264Job?.state === 'error' ? h264Job : null);
 	const showButton = $derived(
 		advanced && videoCodec === 'hevc' && !hasH264Variant && (!h264Job || failed !== null)

@@ -4,7 +4,6 @@ import { getProfile } from '$lib/server/profiles';
 import {
 	getMovie,
 	getPlayable,
-	isPlayReady,
 	type ConversionJobInfo,
 	type EmbeddedSubtitleRef,
 	type SubtitleRef
@@ -31,12 +30,10 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
 	if (!movie) error(404, 'Movie not found');
 
 	// The playable row also carries the conversion status + variants — fetched unconditionally
-	// (not just behind ?play) so the detail page can show "Converting…"/"Queued"/"failed" instead
-	// of a Play link while the file isn't direct-playable yet (phase-5-media-pipeline.md "UI
-	// status").
+	// (not just behind ?play) so the detail page can show a "Converting…"/"Queued" badge beside
+	// the Play link. It never gates Play (see catalog.ts).
 	const media = getPlayable(params.id);
 	const conversionState: ConversionJobInfo | null = media?.conversionState ?? null;
-	const ready = isPlayReady(conversionState);
 	// Threaded to the "Generate H.264 version" button (advanced profiles only, HEVC-only,
 	// no-existing-variant — see GenerateFallbackButton.svelte / phase-5 amendment).
 	const primaryVideoCodec = media?.variants?.primary.videoCodec ?? media?.videoCodec ?? null;
@@ -46,10 +43,8 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
 	const audioIsMultichannel = media?.audioIsMultichannel ?? false;
 
 	// ?play reveals the inline player in place of the poster (desktop mode — see phase-3.md §7).
-	// Only built once the media is actually ready to play — a stale/forged ?play on a converting
-	// title should fall back to the status badge, not a broken player.
 	let player: InlinePlayerData | null = null;
-	if (url.searchParams.has('play') && ready && media) {
+	if (url.searchParams.has('play') && media) {
 		const progress = getProgress(profile.id, media.mediaId);
 		player = {
 			mediaId: media.mediaId,
@@ -67,7 +62,6 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
 		profile,
 		movie,
 		conversionState,
-		ready,
 		player,
 		primaryVideoCodec,
 		hasH264Variant,

@@ -7,7 +7,6 @@
 	import ConversionStatus from '$lib/components/ConversionStatus.svelte';
 	import DownmixAudioButton from '$lib/components/DownmixAudioButton.svelte';
 	import GenerateFallbackButton from '$lib/components/GenerateFallbackButton.svelte';
-	import { isPlayReady } from '$lib/playReady';
 	import type { Episode } from '$lib/server/catalog';
 
 	interface Props {
@@ -42,12 +41,11 @@
 			</div>
 
 			<div class="actions">
-				{#if isPlayReady(ep.conversionState)}
-					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- playHrefFor is caller-supplied and already resolve()d -->
-					<a class="play" href={playHrefFor(ep)}>Play</a>
-				{:else}
-					<ConversionStatus state={ep.conversionState} />
-				{/if}
+				<!-- Play is unconditional — a conversion never makes the file unplayable, so its
+				     status is a badge beside the button, never a replacement for it. -->
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- playHrefFor is caller-supplied and already resolve()d -->
+				<a class="play" href={playHrefFor(ep)}>Play</a>
+				<ConversionStatus state={ep.conversionState} />
 				<GenerateFallbackButton
 					mediaId={ep.mediaId}
 					videoCodec={ep.videoCodec}

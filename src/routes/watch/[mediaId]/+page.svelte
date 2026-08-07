@@ -4,7 +4,6 @@
 	// directly, but Play buttons only send desktop mode to the inline player.
 
 	import { resolve } from '$app/paths';
-	import ConversionStatus from '$lib/components/ConversionStatus.svelte';
 	import Player from '$lib/components/Player.svelte';
 	import type { PageData } from './$types';
 
@@ -21,26 +20,20 @@
 
 <div class="stage">
 	<a class="back" class:hidden={!controlsVisible} href={resolve('/')}>‹ Back</a>
-	{#if data.ready}
-		<Player
-			bind:controlsVisible
-			mediaId={data.media.mediaId}
-			title={data.media.title}
-			showTitle={data.media.showTitle}
-			subtitles={data.media.subtitles}
-			startAt={data.startAt}
-			initialSubPref={data.subtitlePref}
-			primaryVideoCodec={data.media.variants?.primary.videoCodec ?? data.media.videoCodec}
-			hasH264Variant={data.media.variants?.h264 != null}
-			embeddedSubtitles={data.media.embeddedSubtitles}
-			next={data.next}
-			mode={data.mode ?? 'tv'}
-		/>
-	{:else}
-		<div class="not-ready">
-			<ConversionStatus state={data.media.conversionState} />
-		</div>
-	{/if}
+	<Player
+		bind:controlsVisible
+		mediaId={data.media.mediaId}
+		title={data.media.title}
+		showTitle={data.media.showTitle}
+		subtitles={data.media.subtitles}
+		startAt={data.startAt}
+		initialSubPref={data.subtitlePref}
+		primaryVideoCodec={data.media.variants?.primary.videoCodec ?? data.media.videoCodec}
+		hasH264Variant={data.media.variants?.h264 != null}
+		embeddedSubtitles={data.media.embeddedSubtitles}
+		next={data.next}
+		mode={data.mode ?? 'tv'}
+	/>
 </div>
 
 <style>
@@ -51,13 +44,6 @@
 		display: flex;
 		align-items: center;
 		background: #000;
-	}
-
-	.not-ready {
-		display: flex;
-		width: 100%;
-		align-items: center;
-		justify-content: center;
 	}
 
 	.stage :global(.player) {

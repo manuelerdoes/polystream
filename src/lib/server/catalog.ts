@@ -3,7 +3,6 @@
 // ever touched inside scanner.scan(), never on a page request (phase-2.md §5).
 
 import { getDb } from '$lib/server/db';
-import { isPlayReady } from '$lib/playReady';
 
 export type CatalogType = 'movie' | 'show' | 'season' | 'episode';
 
@@ -420,13 +419,12 @@ function toConversionJobInfo(row: ConversionJobRow): ConversionJobInfo {
 	};
 }
 
-/**
- * Whether a media can be handed to the player right now (Stage 2's status gating). Defined in
- * $lib/playReady so the client components that render Play controls can share the exact same rule
- * (this module is server-only); re-exported here since every server caller already imports it
- * from catalog.
- */
-export { isPlayReady } from '$lib/playReady';
+// There is deliberately no "is this play-ready?" gate any more. Play is ALWAYS offered: the file
+// behind `catalog.path` is a real, complete video at every moment of a conversion's life — the
+// worker converts to a local temp file and only swaps the original in after the result verifies
+// (see convert.ts's ordering), so nothing a job does, including failing, ever makes the library
+// file unplayable. Conversion state is shown as a badge NEXT TO Play (ConversionStatus.svelte),
+// never in place of it. A conversion is an optional improvement; it must never cost playback.
 
 /** The current conversion job for one media, or null if none was ever enqueued for it. */
 export function getConversionState(mediaId: string): ConversionJobInfo | null {
@@ -508,11 +506,12 @@ export interface NextEpisode {
 }
 
 /**
- * The play-ready episode that should autoplay after `mediaId` (Netflix-style "Up next").
- * Returns null for movies, unknown ids, the last episode of a series, or when the successor
- * exists but isn't play-ready yet (still converting) — the player skips the card in all these
- * cases. "Next" is the smallest-numbered later episode in the same season, else the lowest
- * episode of the next-numbered season under the same show.
+ * The episode that should autoplay after `mediaId` (Netflix-style "Up next"). Returns null for
+ * movies, unknown ids, and the last episode of a series — the player skips the card in those
+ * cases. A successor with a conversion in flight or a failed one is still offered: its file is
+ * playable either way (see the note above on why there's no play-ready gate). "Next" is the
+ * smallest-numbered later episode in the same season, else the lowest episode of the
+ * next-numbered season under the same show.
  */
 export function getNextEpisode(mediaId: string): NextEpisode | null {
 	const db = getDb();
@@ -558,8 +557,6 @@ export function getNextEpisode(mediaId: string): NextEpisode | null {
 	}
 
 	if (!row) return null;
-	// Decision: a not-yet-play-ready successor is treated as "no next episode".
-	if (!isPlayReady(getConversionState(row.media_id))) return null;
 
 	return {
 		mediaId: row.media_id,

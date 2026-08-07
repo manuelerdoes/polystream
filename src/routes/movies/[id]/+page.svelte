@@ -60,12 +60,10 @@
 				<p class="overview">{data.movie.overview}</p>
 			{/if}
 			{#if !data.player}
-				{#if data.ready}
-					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- playHref is built from resolve() plus an appended query string -->
-					<a class="play" href={playHref}>Play</a>
-				{:else}
-					<ConversionStatus state={data.conversionState} />
-				{/if}
+				<!-- Play is unconditional — see catalog.ts on why conversion state never gates it. -->
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- playHref is built from resolve() plus an appended query string -->
+				<a class="play" href={playHref}>Play</a>
+				<ConversionStatus state={data.conversionState} />
 				<div class="fallback">
 					<GenerateFallbackButton
 						mediaId={data.movie.mediaId}

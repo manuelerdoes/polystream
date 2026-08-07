@@ -5,7 +5,6 @@ import {
 	getPlayable,
 	getSeason,
 	getShow,
-	isPlayReady,
 	type EmbeddedSubtitleRef,
 	type SubtitleRef
 } from '$lib/server/catalog';
@@ -39,14 +38,12 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
 
 	const episodes = season !== null ? getSeason(show.mediaId, season) : [];
 
-	// ?play=<episodeId> reveals the inline player above the episode list (desktop mode). Only
-	// built once that episode is actually ready to play (see catalog.ts's isPlayReady) — a stale/
-	// forged ?play on a converting episode falls back to its status badge in the list instead.
+	// ?play=<episodeId> reveals the inline player above the episode list (desktop mode).
 	let player: InlinePlayerData | null = null;
 	const playId = url.searchParams.get('play');
 	if (playId) {
 		const media = getPlayable(playId);
-		if (media && isPlayReady(media.conversionState)) {
+		if (media) {
 			const progress = getProgress(profile.id, media.mediaId);
 			player = {
 				mediaId: media.mediaId,

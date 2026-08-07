@@ -2,9 +2,9 @@
 	// Custom player UI (phase-5-media-pipeline.md "Playback (client)"): a bare <video> (no native
 	// `controls`) plus our own control bar, so playback looks identical on every browser/OS. Direct
 	// -plays a pre-converted variant only — no HLS, no client remux, no "unsupported" fallback.
-	// Stage 1 guarantees every title this component is asked to play is either already-compatible
-	// H.264 or a HEVC primary with an H.264 fallback; a title still converting never reaches here
-	// (the play hosts gate on catalog.ts's `isPlayReady` before rendering <Player>).
+	// Every title reaches here, whatever its conversion state (nothing gates Play — see
+	// catalog.ts): the file is always a complete video, it just might be a codec this device
+	// can't decode, which is what the `unavailable` overlay below is for.
 	//
 	// Two things this component decides for itself, client-side only:
 	//  1. which variant to request (`capabilities.ts`'s per-device HEVC probe, or the user's
